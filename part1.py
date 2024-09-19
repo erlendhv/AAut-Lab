@@ -67,13 +67,13 @@ def data_info(X_train, y_train):
 
 def outlier_detection(X_train, y_train):
     # Compute the Z-scores of each feature in the dataset
-    z_scores = np.abs(stats.zscore(X_train))
+    z_scores = np.abs(stats.zscore(y_train))
 
     # Set a threshold to identify outliers
-    threshold = 3
+    threshold = 1
 
     # Identify the indices of rows without outliers
-    clean_indices = (z_scores < threshold).all(axis=1)
+    clean_indices = (abs(z_scores) < threshold)
 
     # Filter out outliers in both X_train and y_train
     X_train_clean = X_train[clean_indices]
@@ -84,17 +84,16 @@ def outlier_detection(X_train, y_train):
 
 
 # Function to detect outliers using MAD
-
 def outlier_detection_mad(X_train, y_train):
-    def mad_based_outlier(points, threshold=3.5):
+    def mad_based_outlier(points, threshold=0.3):
         # Median of the data
-        median = np.median(points, axis=0)
+        median = np.median(points)
 
         # Absolute deviation from the median
         abs_deviation = np.abs(points - median)
 
         # Median Absolute Deviation
-        mad = np.median(abs_deviation, axis=0)
+        mad = np.median(abs_deviation)
 
         # Avoid division by zero by adding a small constant (e.g., 1e-9)
         mad = mad + 1e-9
@@ -103,16 +102,15 @@ def outlier_detection_mad(X_train, y_train):
         modified_z_score = 0.6745 * abs_deviation / mad
 
         # Identify outliers based on the threshold
-        return modified_z_score > threshold
+        return abs(modified_z_score) < threshold
 
-    # Apply the MAD-based outlier detection to each feature in X_train
-    outliers = np.any(mad_based_outlier(X_train), axis=1)
+    # Apply the MAD-based outlier detection to each feature in y_train
+    clean_indices = mad_based_outlier(y_train)
 
-    # Filter out outliers
-    X_train_clean = X_train[~outliers]
-    y_train_clean = y_train[~outliers]
+    X_train_clean = X_train[clean_indices]
+    y_train_clean = y_train[clean_indices]
 
-    print(f"Removed {np.sum(outliers)} outliers using MAD.")
+    print(f"Removed {np.sum(clean_indices)} outliers using MAD.")
     return X_train_clean, y_train_clean
 
 
@@ -152,28 +150,6 @@ def lasso_L1_regularization(X_train_clean, y_train_clean):
     print(f"Best cross-validated score: {lasso_cv.best_score_}")
 
 
-def multicollinearity_pca(X_train_clean, y_train_clean):
-    # Standardize the features
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train_clean)
-
-    # Apply PCA to reduce the dimensionality before regression
-    pca = PCA(n_components=2)
-    X_train_pca = pca.fit_transform(X_train_scaled)
-
-    # Ridge Regression with cross-validation for hyperparameter tuning
-    ridge = Ridge(max_iter=5000)
-    # Alpha is the regularization strength
-    param_grid = {'alpha': [0.01, 0.1, 1, 10, 100]}
-    ridge_cv = GridSearchCV(ridge, param_grid, cv=5)
-
-    # Fit the Ridge model on PCA-transformed data
-    ridge_cv.fit(X_train_pca, y_train_clean)
-
-    print(f"Best alpha: {ridge_cv.best_params_['alpha']}")
-    print(f"Best cross-validated score: {ridge_cv.best_score_}")
-
-
 def ridge_L2_with_polynomial(X_train_clean, y_train_clean, degree=2):
     # Standardize the features
     scaler = StandardScaler()
@@ -186,7 +162,7 @@ def ridge_L2_with_polynomial(X_train_clean, y_train_clean, degree=2):
     # Ridge Regression with cross-validation for hyperparameter tuning
     ridge = Ridge(max_iter=20000)
     # Alpha is the regularization strength
-    param_grid = {'alpha': [0.01, 0.1, 1, 10, 100]}
+    param_grid = {'alpha': [1, 2, 4, 6, 8, 10, 30, 70, 100, 130, 160, 200]}
     ridge_cv = GridSearchCV(ridge, param_grid, cv=5)
     ridge_cv.fit(X_train_poly, y_train_clean)
 
@@ -207,7 +183,7 @@ def lasso_L1_with_polynomial(X_train_clean, y_train_clean, degree=2):
     # Lasso Regression with cross-validation for hyperparameter tuning
     lasso = Lasso(max_iter=20000)
     # Alpha is the regularization strength
-    param_grid = {'alpha': [0.01, 0.1, 1, 10, 100]}
+    param_grid = {'alpha': [0.01, 0.1, 1, 3, 5, 7]}
     lasso_cv = GridSearchCV(lasso, param_grid, cv=5)
     lasso_cv.fit(X_train_poly, y_train_clean)
 
@@ -217,11 +193,10 @@ def lasso_L1_with_polynomial(X_train_clean, y_train_clean, degree=2):
 
 
 if __name__ == "__main__":
-    data_info(X_train, y_train)
-    # Choose outlier detection method (Z-score or MAD)
-    # X_train_clean, y_train_clean = outlier_detection(X_train, y_train)
+    # data_info(X_train, y_train)
+
     print("Outlier Detection with Z-score")
-    X_train_clean, y_train_clean = outlier_detection_mad(X_train, y_train)
+    X_train_clean, y_train_clean = outlier_detection(X_train, y_train)
 
     # Regularization with Ridge and Lasso after outlier removal and scaling
     print("Regularization with Ridge")
@@ -235,6 +210,24 @@ if __name__ == "__main__":
     print("Lasso L1 with Polynomial Features")
     lasso_L1_with_polynomial(X_train_clean, y_train_clean, degree=3)
 
-    # Apply PCA and Ridge
-    print("PCA with Ridge")
-    multicollinearity_pca(X_train_clean, y_train_clean)
+    print("\n")
+    print("\n")
+    print("\n")
+    print("\n")
+    print("\n")
+    print("\n")
+    print("\n")
+    print("Outlier Detection with MAD")
+    X_train_clean, y_train_clean = outlier_detection_mad(X_train, y_train)
+
+    # Regularization with Ridge and Lasso after outlier removal and scaling
+    print("Regularization with Ridge")
+    ridge_L2_regularization(X_train_clean, y_train_clean)
+    print("Regularization with Lasso")
+    lasso_L1_regularization(X_train_clean, y_train_clean)
+
+    # Add polynomial features and apply Ridge and Lasso regularization
+    print("Ridge L2 with Polynomial Features")
+    ridge_L2_with_polynomial(X_train_clean, y_train_clean, degree=3)
+    print("Lasso L1 with Polynomial Features")
+    lasso_L1_with_polynomial(X_train_clean, y_train_clean, degree=3)
