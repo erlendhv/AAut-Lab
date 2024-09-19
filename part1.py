@@ -184,7 +184,7 @@ def ridge_L2_with_polynomial(X_train_clean, y_train_clean, degree=2):
     X_train_poly = poly.fit_transform(X_train_scaled)
 
     # Ridge Regression with cross-validation for hyperparameter tuning
-    ridge = Ridge(max_iter=5000)
+    ridge = Ridge(max_iter=20000)
     # Alpha is the regularization strength
     param_grid = {'alpha': [0.01, 0.1, 1, 10, 100]}
     ridge_cv = GridSearchCV(ridge, param_grid, cv=5)
@@ -205,7 +205,7 @@ def lasso_L1_with_polynomial(X_train_clean, y_train_clean, degree=2):
     X_train_poly = poly.fit_transform(X_train_scaled)
 
     # Lasso Regression with cross-validation for hyperparameter tuning
-    lasso = Lasso(max_iter=5000)
+    lasso = Lasso(max_iter=20000)
     # Alpha is the regularization strength
     param_grid = {'alpha': [0.01, 0.1, 1, 10, 100]}
     lasso_cv = GridSearchCV(lasso, param_grid, cv=5)
@@ -217,17 +217,24 @@ def lasso_L1_with_polynomial(X_train_clean, y_train_clean, degree=2):
 
 
 if __name__ == "__main__":
+    data_info(X_train, y_train)
     # Choose outlier detection method (Z-score or MAD)
     # X_train_clean, y_train_clean = outlier_detection(X_train, y_train)
+    print("Outlier Detection with Z-score")
     X_train_clean, y_train_clean = outlier_detection_mad(X_train, y_train)
 
     # Regularization with Ridge and Lasso after outlier removal and scaling
+    print("Regularization with Ridge")
     ridge_L2_regularization(X_train_clean, y_train_clean)
+    print("Regularization with Lasso")
     lasso_L1_regularization(X_train_clean, y_train_clean)
 
     # Add polynomial features and apply Ridge and Lasso regularization
-    ridge_L2_with_polynomial(X_train_clean, y_train_clean, degree=2)
-    lasso_L1_with_polynomial(X_train_clean, y_train_clean, degree=2)
+    print("Ridge L2 with Polynomial Features")
+    ridge_L2_with_polynomial(X_train_clean, y_train_clean, degree=3)
+    print("Lasso L1 with Polynomial Features")
+    lasso_L1_with_polynomial(X_train_clean, y_train_clean, degree=3)
 
     # Apply PCA and Ridge
+    print("PCA with Ridge")
     multicollinearity_pca(X_train_clean, y_train_clean)
