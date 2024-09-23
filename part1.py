@@ -24,6 +24,7 @@ from sklearn.preprocessing import PolynomialFeatures
 
 X_train = np.load('X_train.npy')
 y_train = np.load('y_train.npy')
+X_test = np.load('X_test.npy')
 
 
 def data_info(X_train, y_train):
@@ -192,6 +193,23 @@ def lasso_L1_with_polynomial(X_train_clean, y_train_clean, degree=2):
     print(f"Best cross-validated score: {lasso_cv.best_score_}")
 
 
+def predict(model, X_train_clean, y_train_clean, X_test, filename):
+    # Standardize the training and test features
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train_clean)
+    X_test_scaled = scaler.transform(X_test)
+
+    # Fit the model on the cleaned and scaled training data
+    model.fit(X_train_scaled, y_train_clean)
+
+    # Predict the dependent variable for the test set
+    y_pred = model.predict(X_test_scaled)
+
+    # Save the predicted results to an npy file
+    np.save(filename, y_pred)
+    print(f"Predictions saved to {filename}")
+
+
 if __name__ == "__main__":
     # data_info(X_train, y_train)
 
@@ -226,8 +244,34 @@ if __name__ == "__main__":
     print("Regularization with Lasso")
     lasso_L1_regularization(X_train_clean, y_train_clean)
 
-    # Add polynomial features and apply Ridge and Lasso regularization
-    print("Ridge L2 with Polynomial Features")
-    ridge_L2_with_polynomial(X_train_clean, y_train_clean, degree=3)
-    print("Lasso L1 with Polynomial Features")
-    lasso_L1_with_polynomial(X_train_clean, y_train_clean, degree=3)
+    # # Add polynomial features and apply Ridge and Lasso regularization
+    # print("Ridge L2 with Polynomial Features")
+    # ridge_L2_with_polynomial(X_train_clean, y_train_clean, degree=3)
+    # print("Lasso L1 with Polynomial Features")
+    # lasso_L1_with_polynomial(X_train_clean, y_train_clean, degree=3)
+
+    best_ridge = Ridge(alpha=10, max_iter=5000)
+    best_lasso = Lasso(alpha=0.01, max_iter=5000)
+
+    # Predict and save the test results using Ridge and Lasso
+    predict(
+        best_ridge, X_train_clean, y_train_clean, X_test, "ridge_predictions.npy")
+    predict(
+        best_lasso, X_train_clean, y_train_clean, X_test, "lasso_predictions.npy")
+
+    # Plot y_train
+    plt.figure(figsize=(10, 6))
+    plt.hist(y_train, bins=30, alpha=0.5, label="y_train", color='green')
+    plt.legend()
+    plt.title("Histogram of y_train")
+    plt.show()
+
+    # Plot the predicted values,
+    plt.figure(figsize=(10, 6))
+    plt.hist(np.load("ridge_predictions.npy"), bins=30, alpha=0.5,
+             label="Ridge Predictions", color='blue')
+    plt.hist(np.load("lasso_predictions.npy"), bins=30, alpha=0.5,
+             label="Lasso Predictions", color='red')
+    plt.legend()
+    plt.title("Histogram of Predicted Values")
+    plt.show()
