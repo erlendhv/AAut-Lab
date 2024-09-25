@@ -1,25 +1,17 @@
 from sklearn.ensemble import RandomForestRegressor
 import numpy as np
 import pandas as pd
-
 import seaborn as sns
 import matplotlib.pyplot as plt
-
-
 from scipy import stats
 import numpy as np
-
-
 from sklearn.linear_model import Ridge
 from sklearn.model_selection import GridSearchCV
-
 from sklearn.linear_model import Lasso
-
 from sklearn.decomposition import PCA
-
 from sklearn.preprocessing import StandardScaler
-
 from sklearn.preprocessing import PolynomialFeatures
+from sklearn.neighbors import LocalOutlierFactor
 
 
 X_train = np.load('X_train.npy')
@@ -65,15 +57,13 @@ def data_info(X_train, y_train):
     for i, importance in enumerate(importances):
         print(f'Feature {i}: {importance}')
 
-
-def outlier_detection(X_train, y_train):
+# fair to assume close to normal distribution due to the sample size?
+def z_outlier_detection(X_train, y_train):
     # Compute the Z-scores of each feature in the dataset
     z_scores = np.abs(stats.zscore(y_train))
 
-    # Set a threshold to identify outliers
-    threshold = 1
-
     # Identify the indices of rows without outliers
+    threshold = 0.9 # removes about 25%
     clean_indices = (abs(z_scores) < threshold)
 
     # Filter out outliers in both X_train and y_train
@@ -83,35 +73,49 @@ def outlier_detection(X_train, y_train):
     print(f"Removed {len(X_train) - len(X_train_clean)} outliers.")
     return X_train_clean, y_train_clean
 
+def local_outlier_factor(X_train, y_train):
+    lof = LocalOutlierFactor(n_neighbors=5, contamination=0.1)
+    y_reshape = y_train.reshape(-1, 1)
+    outliers = lof.fit_predict(y_reshape)
+    negative_outlier_factors = lof.negative_outlier_factor_
+    threshold = -1.22
+    inlier_mask = negative_outlier_factors > threshold
+    X_pruned = X_train[inlier_mask]
+    y_pruned = y_train[inlier_mask]
+    print("Number of outliers detected:", len(y_train) - len(y_pruned))
+    return X_pruned, y_pruned
 
-# Function to detect outliers using MAD
+def iqr_outlier_removal(X_train, y_train):
+    Q1 = np.percentile(y_train, 25)
+    Q3 = np.percentile(y_train, 75)
+    IQR = Q3 - Q1
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+    inlier_mask = (y_train >= lower_bound) & (y_train <= upper_bound)
+    X_pruned = X_train[inlier_mask]
+    y_pruned = y_train[inlier_mask]
+    print("Number of outliers detected:", len(y_train) - len(y_pruned))
+    return X_pruned, y_pruned
+
 def outlier_detection_mad(X_train, y_train):
     def mad_based_outlier(points, threshold=0.3):
         # Median of the data
         median = np.median(points)
-
-        # Absolute deviation from the median
         abs_deviation = np.abs(points - median)
-
-        # Median Absolute Deviation
         mad = np.median(abs_deviation)
-
-        # Avoid division by zero by adding a small constant (e.g., 1e-9)
-        mad = mad + 1e-9
-
+        mad = mad + 1e-9 # avoid division by zero by adding a small constant (e.g., 1e-9)
         # Compute the modified Z-score (scaled by a factor of 1.4826)
         modified_z_score = 0.6745 * abs_deviation / mad
 
         # Identify outliers based on the threshold
         return abs(modified_z_score) < threshold
 
-    # Apply the MAD-based outlier detection to each feature in y_train
+    # Prune training data based on outlier detection
     clean_indices = mad_based_outlier(y_train)
-
     X_train_clean = X_train[clean_indices]
     y_train_clean = y_train[clean_indices]
-
     print(f"Removed {np.sum(clean_indices)} outliers using MAD.")
+
     return X_train_clean, y_train_clean
 
 
@@ -120,11 +124,10 @@ def ridge_L2_regularization(X_train_clean, y_train_clean):
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train_clean)
 
-    # Ridge Regression with cross-validation for hyperparameter tuning
-    # Increase max_iter to handle convergence issues
-    ridge = Ridge(max_iter=5000)
-    # Alpha is the regularization strength
-    param_grid = {'alpha': [0.01, 0.1, 1, 10, 100]}
+    # Search for best params using grid search
+    ridge = Ridge()
+    param_grid = {'alpha': [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 10, 100], 
+                  'max_iter': [250, 400, 500, 600, 750, 1000, 1500, 5000, 10000]}
     ridge_cv = GridSearchCV(ridge, param_grid, cv=5)
     ridge_cv.fit(X_train_scaled, y_train_clean)
 
@@ -132,17 +135,18 @@ def ridge_L2_regularization(X_train_clean, y_train_clean):
     print(f"Best alpha: {ridge_cv.best_params_['alpha']}")
     print(f"Best cross-validated score: {ridge_cv.best_score_}")
 
+    return ridge_cv.best_params_
+
 
 def lasso_L1_regularization(X_train_clean, y_train_clean):
     # Standardize the features
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train_clean)
 
-    # Lasso Regression with cross-validation for hyperparameter tuning
-    # Increase max_iter to handle convergence issues
-    lasso = Lasso(max_iter=5000)
-    # Alpha is the regularization strength
-    param_grid = {'alpha': [0.01, 0.1, 1, 10, 100]}
+    # Search for best params using grid search
+    lasso = Lasso()
+    param_grid = {'alpha': [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 10, 100], 
+                  'max_iter': [250, 400, 500, 600, 750, 1000, 1500, 5000, 10000]}
     lasso_cv = GridSearchCV(lasso, param_grid, cv=5)
     lasso_cv.fit(X_train_scaled, y_train_clean)
 
@@ -150,47 +154,38 @@ def lasso_L1_regularization(X_train_clean, y_train_clean):
     print(f"Best alpha: {lasso_cv.best_params_['alpha']}")
     print(f"Best cross-validated score: {lasso_cv.best_score_}")
 
+    return lasso_cv.best_params_
 
+# Not relevant, try to find linear relationship between input and output.
+# Polynomial features implies a non-linear relationship.
 def ridge_L2_with_polynomial(X_train_clean, y_train_clean, degree=2):
-    # Standardize the features
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train_clean)
-
-    # Generate polynomial features
     poly = PolynomialFeatures(degree=degree)
     X_train_poly = poly.fit_transform(X_train_scaled)
-
-    # Ridge Regression with cross-validation for hyperparameter tuning
     ridge = Ridge(max_iter=20000)
-    # Alpha is the regularization strength
-    param_grid = {'alpha': [1, 2, 4, 6, 8, 10, 30, 70, 100, 130, 160, 200]}
+    param_grid = {'alpha': [1, 2, 4, 6, 8, 10, 30, 70, 100, 130, 160, 200], 'max_iter': [1000, 5000, 10000]}
     ridge_cv = GridSearchCV(ridge, param_grid, cv=5)
     ridge_cv.fit(X_train_poly, y_train_clean)
-
-    # Best alpha value and the corresponding score
     print(f"Best alpha: {ridge_cv.best_params_['alpha']}")
     print(f"Best cross-validated score: {ridge_cv.best_score_}")
+    return ridge_cv.best_params_
 
 
+# Not relevant, try to find linear relationship between input and output.
+# Polynomial features implies a non-linear relationship.
 def lasso_L1_with_polynomial(X_train_clean, y_train_clean, degree=2):
-    # Standardize the features
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train_clean)
-
-    # Generate polynomial features
     poly = PolynomialFeatures(degree=degree)
     X_train_poly = poly.fit_transform(X_train_scaled)
-
-    # Lasso Regression with cross-validation for hyperparameter tuning
     lasso = Lasso(max_iter=20000)
-    # Alpha is the regularization strength
-    param_grid = {'alpha': [0.01, 0.1, 1, 3, 5, 7]}
+    param_grid = {'alpha': [0.01, 0.1, 1, 3, 5, 7], 'max_iter': [1000, 5000, 10000]}
     lasso_cv = GridSearchCV(lasso, param_grid, cv=5)
     lasso_cv.fit(X_train_poly, y_train_clean)
-
-    # Best alpha value and the corresponding score
     print(f"Best alpha: {lasso_cv.best_params_['alpha']}")
     print(f"Best cross-validated score: {lasso_cv.best_score_}")
+    return lasso_cv.best_params_
 
 
 def predict(model, X_train_clean, y_train_clean, X_test, filename):
@@ -202,7 +197,7 @@ def predict(model, X_train_clean, y_train_clean, X_test, filename):
     # Fit the model on the cleaned and scaled training data
     model.fit(X_train_scaled, y_train_clean)
 
-    # Predict the dependent variable for the test set
+    # Predict for the test set
     y_pred = model.predict(X_test_scaled)
 
     # Save the predicted results to an npy file
@@ -213,45 +208,54 @@ def predict(model, X_train_clean, y_train_clean, X_test, filename):
 if __name__ == "__main__":
     # data_info(X_train, y_train)
 
-    print("Outlier Detection with Z-score")
-    X_train_clean, y_train_clean = outlier_detection(X_train, y_train)
+    print("Outlier Detection with Z-score:")
+    X_train_clean_z, y_train_clean_z = z_outlier_detection(X_train, y_train)
+    print("Outlier Detection with local outlier factor:")
+    X_train_clean_lof, y_train_clean_lof = local_outlier_factor(X_train, y_train)
+    print("Outlier Detection with MAD:")
+    X_train_clean_mad, y_train_clean_mad = outlier_detection_mad(X_train, y_train)
+    print("Outlier Detection with IQR:")
+    X_train_clean_iqr, y_train_clean_iqr = iqr_outlier_removal(X_train, y_train)
 
     # Regularization with Ridge and Lasso after outlier removal and scaling
-    print("Regularization with Ridge")
-    ridge_L2_regularization(X_train_clean, y_train_clean)
-    print("Regularization with Lasso")
-    lasso_L1_regularization(X_train_clean, y_train_clean)
+    """
+    print("Regularization with Ridge using z-score outlier removal:")
+    best_params_ridge_z = ridge_L2_regularization(X_train_clean_z, y_train_clean_z)
+    print("Regularization with Lasso using z-score outlier removal:")
+    best_params_lasso_z = lasso_L1_regularization(X_train_clean_z, y_train_clean_z)
+    print()
+    print("Regularization with Ridge using local outlier factor removal:")
+    best_params_ridge_lof = ridge_L2_regularization(X_train_clean_lof, y_train_clean_lof)
+    print("Regularization with Lasso using local outlier factor removal:")
+    best_params_lasso_lof = lasso_L1_regularization(X_train_clean_lof, y_train_clean_lof)
+    print()
+    print("Regularization with Ridge using mad outlier removal:")
+    best_params_ridge_mad = ridge_L2_regularization(X_train_clean_mad, y_train_clean_mad)
+    print("Regularization with Lasso using mad outlier removal:")
+    best_params_lasso_mad = lasso_L1_regularization(X_train_clean_mad, y_train_clean_mad)
+    print()
+    print("Regularization with Ridge using iqr outlier removal:")
+    best_params_ridge_iqr = ridge_L2_regularization(X_train_clean_iqr, y_train_clean_iqr)
+    print("Regularization with Lasso using iqr outlier removal:")
+    best_params_lasso_iqr = lasso_L1_regularization(X_train_clean_iqr, y_train_clean_iqr)
+    """
+    print("\n"*6)
 
-    # Add polynomial features and apply Ridge and Lasso regularization
-    print("Ridge L2 with Polynomial Features")
-    ridge_L2_with_polynomial(X_train_clean, y_train_clean, degree=3)
-    print("Lasso L1 with Polynomial Features")
-    lasso_L1_with_polynomial(X_train_clean, y_train_clean, degree=3)
-
-    print("\n")
-    print("\n")
-    print("\n")
-    print("\n")
-    print("\n")
-    print("\n")
-    print("\n")
     print("Outlier Detection with MAD")
     X_train_clean, y_train_clean = outlier_detection_mad(X_train, y_train)
 
     # Regularization with Ridge and Lasso after outlier removal and scaling
     print("Regularization with Ridge")
-    ridge_L2_regularization(X_train_clean, y_train_clean)
+    best_params_ridge = ridge_L2_regularization(X_train_clean, y_train_clean)
     print("Regularization with Lasso")
-    lasso_L1_regularization(X_train_clean, y_train_clean)
+    best_params_lasso = lasso_L1_regularization(X_train_clean, y_train_clean)
 
-    # # Add polynomial features and apply Ridge and Lasso regularization
-    # print("Ridge L2 with Polynomial Features")
-    # ridge_L2_with_polynomial(X_train_clean, y_train_clean, degree=3)
-    # print("Lasso L1 with Polynomial Features")
-    # lasso_L1_with_polynomial(X_train_clean, y_train_clean, degree=3)
+    print(f"\n\nBest params ridge: \n- alpha: {best_params_ridge["alpha"]}\n- max_iter: {best_params_ridge["max_iter"]}")
+    print(f"\n\nBest params lasso: \n- alpha: {best_params_lasso["alpha"]}\n- max_iter: {best_params_lasso["max_iter"]}")
+    print("\n")
 
-    best_ridge = Ridge(alpha=10, max_iter=5000)
-    best_lasso = Lasso(alpha=0.01, max_iter=5000)
+    best_ridge = Ridge(alpha=best_params_ridge["alpha"], max_iter=best_params_ridge["max_iter"])
+    best_lasso = Lasso(alpha=best_params_lasso["alpha"], max_iter=best_params_lasso["max_iter"])
 
     # Predict and save the test results using Ridge and Lasso
     predict(
@@ -260,18 +264,18 @@ if __name__ == "__main__":
         best_lasso, X_train_clean, y_train_clean, X_test, "lasso_predictions.npy")
 
     # Plot y_train
-    plt.figure(figsize=(10, 6))
-    plt.hist(y_train, bins=30, alpha=0.5, label="y_train", color='green')
-    plt.legend()
-    plt.title("Histogram of y_train")
-    plt.show()
+    # plt.figure(figsize=(10, 6))
+    # plt.hist(y_train, bins=30, alpha=0.5, label="y_train", color='green')
+    # plt.legend()
+    # plt.title("Histogram of y_train")
+    # plt.show()
 
     # Plot the predicted values,
-    plt.figure(figsize=(10, 6))
-    plt.hist(np.load("ridge_predictions.npy"), bins=30, alpha=0.5,
-             label="Ridge Predictions", color='blue')
-    plt.hist(np.load("lasso_predictions.npy"), bins=30, alpha=0.5,
-             label="Lasso Predictions", color='red')
-    plt.legend()
-    plt.title("Histogram of Predicted Values")
-    plt.show()
+    # plt.figure(figsize=(10, 6))
+    # plt.hist(np.load("ridge_predictions.npy"), bins=30, alpha=0.5,
+    #          label="Ridge Predictions", color='blue')
+    # plt.hist(np.load("lasso_predictions.npy"), bins=30, alpha=0.5,
+    #          label="Lasso Predictions", color='red')
+    # plt.legend()
+    # plt.title("Histogram of Predicted Values")
+    # plt.show()
