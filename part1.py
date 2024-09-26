@@ -8,7 +8,6 @@ import numpy as np
 from sklearn.linear_model import Ridge
 from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import Lasso
-from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.neighbors import LocalOutlierFactor
