@@ -15,9 +15,9 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import LocalOutlierFactor
 
 
-X_train = np.load('X_train.npy')
-y_train = np.load('y_train.npy')
-X_test = np.load('X_test.npy')
+X_train = np.load('Part1/X_train.npy')
+y_train = np.load('Part1/y_train.npy')
+X_test = np.load('Part1/X_test.npy')
 
 
 def data_info(X_train, y_train):
