@@ -12,17 +12,17 @@ def denormalize_data(normalized_data, original_mean, original_std):
 
 def create_regressor_matrix(output_data, input_data, n, m, d):
     total_samples = len(output_data)
-    max_lag = max(n, d + m)
+    p = max(n, d + m)
     num_features = n + m + 1
-    num_rows = total_samples - max_lag
+    num_rows = total_samples - p
 
     regressor_matrix = np.zeros((num_rows, num_features))
-    target_vector = output_data[max_lag:]
+    target_vector = output_data[p:]
 
     for row in range(num_rows):
-        output_lags = -output_data[row + max_lag - n:row + max_lag][::-1]
-        input_lags = input_data[row + max_lag -
-                                d - m:row + max_lag - d + 1][::-1]
+        output_lags = -output_data[row + p - n:row + p][::-1]
+        input_lags = input_data[row + p -
+                                d - m:row + p - d + 1][::-1]
         regressor_matrix[row, :n] = output_lags
         regressor_matrix[row, n:] = input_lags
 
