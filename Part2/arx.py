@@ -107,6 +107,6 @@ test_predictions = denormalize_data(
     test_predictions_norm, output_train_mean, output_train_std)
 
 # Save last 400 samples
-np.save('Part2/y_test_pred_last_400.npy', test_predictions[-400:])
+np.save('Part2/pred_arx.npy', test_predictions[-400:])
 
-print("Prediction complete. Last 400 samples saved to 'y_test_pred_last_400.npy'.")
+print("Prediction complete. Last 400 samples saved to 'pred_arx.npy'.")

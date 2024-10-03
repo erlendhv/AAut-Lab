@@ -57,13 +57,31 @@ print('Non-matches train:', len(non_matches))
 y_pred = np.load('Part2/y_test_pred_last_400.npy')
 u_test = u_test[-400:]
 print('y_pred:', y_pred.shape)
-plt.plot(range(len(u_test)), u_test, 'r-', label='output_train')
-plt.plot(range(len(y_pred)), y_pred, 'b-', label='y_test_pred')
+plt.plot(range(len(u_test)), u_test, 'b-', label='output_train')
+plt.plot(range(len(y_pred)), y_pred, 'r-', label='y_test_pred')
 plt.xlabel('Index')
 plt.ylabel('Value')
-plt.title('Training Data and Predictions')
+plt.title('Training Data and Predictions using ARX')
 plt.legend()
 plt.show()
+
+y_pred_rls = np.load('Part2/y_test_pred_last_400_rls.npy')
+u_test = u_test[-400:]
+print('y_pred_rls:', y_pred_rls.shape)
+plt.plot(range(len(u_test)), u_test, 'b-', label='output_train')
+plt.plot(range(len(y_pred_rls)), y_pred_rls, 'r-', label='y_test_pred_rls')
+plt.xlabel('Index')
+plt.ylabel('Value')
+plt.title('Training Data and Predictions using rls ARX')
+plt.legend()
+plt.show()
+
+if np.array_equal(y_pred, y_pred_rls):
+    print("rls and regular ARX equal")
+else:
+    pass
+    #absolute_diff = np.abs(y_pred - y_pred_rls)
+    #print("Absolute differences:", absolute_diff)  # Output: [0 0 3 0]
 
 print("u_test: ", u_test.shape)
 
