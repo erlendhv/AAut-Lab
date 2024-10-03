@@ -54,7 +54,7 @@ print('Zeros train:', len(zeros))
 
 print('Non-matches train:', len(non_matches))
 
-y_pred = np.load('y_test_pred_last_400.npy')
+y_pred = np.load('Part2/y_test_pred_last_400.npy')
 u_test = u_test[-400:]
 print('y_pred:', y_pred.shape)
 # plt.plot(range(len(output_train)), output_train, 'b-', label='output_train')

@@ -96,6 +96,6 @@ y_test_pred_norm = predict_arx(
 y_test_pred = denormalize_data(y_test_pred_norm, y_train_mean, y_train_std)
 
 # Save last 400 samples
-np.save('y_test_pred_last_400.npy', y_test_pred[-400:])
+np.save('Part2/y_test_pred_last_400.npy', y_test_pred[-400:])
 
 print("Prediction complete. Last 400 samples saved to 'y_test_pred_last_400.npy'.")
