@@ -1,0 +1,50 @@
+Things to test:
+
+- Filter/kernel size, should be odd size. Bigger filters to detect bigger features
+- Padding to keep information add borders (should maybe be 'Same' so that input size is the same as output size)
+- Stride
+- Channels. Could be better with more, but risk of overfitting
+
+Tips:
+- keep feature space wide and open at the beginning, and small and narrow towards the end
+- use smaller filters in the beginning to get as much information as possible, then gradually reduce
+- number of channels should be low in beginning
+- keep adding layers until overfitting, then regularization/dropout etc can be used
+- sigmoid in final layer for binary classification? (Maybe not necessary because nice to have the confidence, and just set a limit)
+
+Should maybe show a learning curve
+
+Explanation of Changes:
+First Convolutional Block:
+
+A small filter of size 
+3
+×
+3
+3×3 is used with fewer channels (16) to extract small details in the images.
+Max pooling with a stride of 2 reduces the resolution by half.
+Dropout (0.25) is added to prevent overfitting.
+Second Convolutional Block:
+
+Medium filter size 
+5
+×
+5
+5×5 and more channels (32) to capture medium-scale features.
+Max pooling and dropout are again applied for downsampling and regularization.
+Third Convolutional Block:
+
+Large filter size 
+7
+×
+7
+7×7 with even more channels (64) to detect larger features.
+Stronger regularization with a higher dropout rate (0.5) is applied.
+Final Dense Layer:
+
+Dense layers are reduced to 128 neurons for more compact representation.
+Dropout is used to avoid overfitting before the final output layer.
+Final Thoughts:
+This architecture uses padding='same' to maintain spatial dimensions through convolution layers.
+Dropout is added after each block to mitigate overfitting.
+Filters start small to capture fine-grained details and gradually increase in size to detect higher-level features.

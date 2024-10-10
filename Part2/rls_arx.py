@@ -101,9 +101,9 @@ best_sse = float('inf')
 best_params = None
 best_theta = None
 
-for n in range(1, 10):
-    for m in range(10):
-        for d in range(10):
+for n in range(1, 11):
+    for m in range(11):
+        for d in range(11):
             # Train RLS-ARX model on training split
             theta = rls_arx(y_train_split, u_train_split, n, m, d)
             # Predict on the validation set
