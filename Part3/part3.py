@@ -66,26 +66,38 @@ def create_cnn_model():
 
 def create_alternative_cnn_model():
     model = Sequential([
-        # First block: detecting small features, few channels
-        Conv2D(16, (3, 3), activation='relu', padding='same', input_shape=(48, 48, 1)),
-        MaxPooling2D((2, 2), strides=2),
-        Dropout(0.25),
+        # # First block: detecting small features, few channels
+        # Conv2D(16, (3, 3), activation='relu', padding='same', input_shape=(48, 48, 1)),
+        # MaxPooling2D((2, 2), strides=2),
+        # Dropout(0.25),
 
-        # Second block: detecting medium features, more channels
-        Conv2D(32, (5, 5), activation='relu', padding='same'),
-        MaxPooling2D((2, 2), strides=2),
-        Dropout(0.25),
+        # # Second block: detecting medium features, more channels
+        # Conv2D(32, (5, 5), activation='relu', padding='same'),
+        # MaxPooling2D((2, 2), strides=2),
+        # Dropout(0.25),
 
-        # Third block: detecting larger features, even more channels
-        Conv2D(64, (7, 7), activation='relu', padding='same'),
-        MaxPooling2D((2, 2), strides=2),
+        # # Third block: detecting larger features, even more channels
+        # Conv2D(64, (7, 7), activation='relu', padding='same'),
+        # MaxPooling2D((2, 2), strides=2),
+        # Dropout(0.5),
+
+        # # Flatten and dense layers
+        # Flatten(),
+        # Dense(128, activation='relu'),
+        # Dropout(0.5),
+        # Dense(1, activation='sigmoid')  # Sigmoid for binary classification
+        Conv2D(32, (3,3), activation='relu', padding='same', input_shape=(48,48,1)),
+        Conv2D(32, (5,5), activation='relu', padding='same'),
+        MaxPooling2D((2,2)),
+        Conv2D(64, (3,3), activation='relu', padding='same'),
+        Conv2D(64, (7,7), activation='relu', padding='same'),
+        MaxPooling2D(2,2),
+        Conv2D(32, (3,3), activation='relu'),
+        MaxPooling2D((4,4)),
         Dropout(0.5),
-
-        # Flatten and dense layers
+        Dense(64, activation='relu'),
         Flatten(),
-        Dense(128, activation='relu'),
-        Dropout(0.5),
-        Dense(1, activation='sigmoid')  # Sigmoid for binary classification
+        Dense(1, activation='sigmoid')
     ])
     
     # Compile the model
@@ -190,7 +202,7 @@ print(f"\nBest performing model: {best_model_name}")
 
 # Make predictions on test set using the best model
 best_model = [model for model, _, name in models if name == best_model_name][0]
-if best_model_name == 'CNN':
+if best_model_name == 'CNN' or best_model_name=='Alternative CNN':
     y_test_pred = (best_model.predict(Xtest1_reshaped)
                    > 0.5).astype(int).flatten()
 else:

@@ -41,31 +41,74 @@ Xtrain1_extra_reshaped = Xtrain1_extra_scaled.reshape(-1, 48, 48, 1)
 
 
 def create_cnn_model():
+    # model = Sequential([
+    #     Conv2D(32, (3, 3), activation='relu', input_shape=(48, 48, 1)),
+    #     MaxPooling2D((2, 2)),
+    #     Conv2D(64, (3, 3), activation='relu'),
+    #     MaxPooling2D((2, 2)),
+    #     Conv2D(64, (3, 3), activation='relu'),
+    #     Flatten(),
+    #     Dense(64, activation='relu'),
+    #     Dropout(0.5),
+    #     Dense(1, activation='sigmoid')
+    # ])
+    # model.compile(optimizer=Adam(learning_rate=0.001),
+    #               loss='binary_crossentropy',
+    #               metrics=['accuracy'])
     model = Sequential([
-        Conv2D(32, (3, 3), activation='relu', input_shape=(48, 48, 1)),
-        MaxPooling2D((2, 2)),
-        Conv2D(64, (3, 3), activation='relu'),
-        MaxPooling2D((2, 2)),
-        Conv2D(64, (3, 3), activation='relu'),
-        Flatten(),
-        Dense(64, activation='relu'),
+        Conv2D(32, (3,3), activation='relu', padding='same', input_shape=(48,48,1)),
+        Conv2D(32, (5,5), activation='relu', padding='same'),
+        MaxPooling2D((2,2)),
+        Conv2D(64, (3,3), activation='relu', padding='same'),
+        Conv2D(64, (7,7), activation='relu', padding='same'),
+        MaxPooling2D(2,2),
+        Conv2D(32, (3,3), activation='relu'),
+        MaxPooling2D((4,4)),
         Dropout(0.5),
+        Dense(64, activation='relu'),
+        Flatten(),
         Dense(1, activation='sigmoid')
     ])
+    
+    # Compile the model
     model.compile(optimizer=Adam(learning_rate=0.001),
                   loss='binary_crossentropy',
                   metrics=['accuracy'])
     return model
 
+def plot_learning_curve(history, model_name):
+    """Plot learning curve based on training history"""
+    # Plot training & validation accuracy values
+    plt.figure(figsize=(12, 5))
+    
+    # Plot accuracy
+    plt.subplot(1, 2, 1)
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title(f'{model_name} - Model accuracy')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='upper left')
+
+    # Plot loss
+    plt.subplot(1, 2, 2)
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title(f'{model_name} - Model loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='upper left')
+
+    plt.show()
+
 # Semi-supervised learning function
-
-
 def semi_supervised_learning(model, X_train, y_train, X_unlabeled, X_val, y_val, confidence_threshold=0.95, max_iterations=5):
     for iteration in range(max_iterations):
         print(f"\nIteration {iteration + 1}")
 
         # Train the model
-        model.fit(X_train, y_train, epochs=10, batch_size=32, verbose=0)
+        history = model.fit(X_train, y_train, epochs=10, batch_size=32, verbose=0, validation_data=(X_val.reshape(-1,48,48,1), y_val))
+        plot_learning_curve(history, "CNN with semi-supervised learning")
 
         # Predict on unlabeled data
         predictions = model.predict(X_unlabeled)
