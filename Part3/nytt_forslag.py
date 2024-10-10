@@ -70,16 +70,6 @@ def semi_supervised_learning(model, X_train, y_train, X_unlabeled, X_val, y_val,
         # Predict on unlabeled data
         predictions = model.predict(X_unlabeled)
 
-        # fig, axes = plt.subplots(1, 10, figsize=(15, 3))
-        # for i in range(10):
-        #     idx = np.random.randint(0, X_unlabeled.shape[0])
-        #     axes[i].imshow(X_unlabeled[idx].reshape(48, 48), cmap='gray')
-        #     axes[i].set_title(f"Label: {predictions[idx]}")
-        #     axes[i].axis('off')
-        # plt.tight_layout()
-        # plt.show()
-
-
         # Select confident predictions
         confident_idx = np.where((predictions > confidence_threshold) | (
             predictions < (1 - confidence_threshold)))[0]
