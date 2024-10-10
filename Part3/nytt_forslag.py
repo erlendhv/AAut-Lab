@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping
 
 # Load the data
 Xtest1 = np.load('Part3/Xtest1.npy')
@@ -106,8 +107,10 @@ def semi_supervised_learning(model, X_train, y_train, X_unlabeled, X_val, y_val,
     for iteration in range(max_iterations):
         print(f"\nIteration {iteration + 1}")
 
+        early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+
         # Train the model
-        history = model.fit(X_train, y_train, epochs=10, batch_size=32, verbose=0, validation_data=(X_val.reshape(-1,48,48,1), y_val))
+        history = model.fit(X_train, y_train, epochs=10, batch_size=32, verbose=0, validation_data=(X_val.reshape(-1,48,48,1), y_val), callbacks=[early_stopping])
         plot_learning_curve(history, "CNN with semi-supervised learning")
 
         # Predict on unlabeled data
@@ -122,6 +125,10 @@ def semi_supervised_learning(model, X_train, y_train, X_unlabeled, X_val, y_val,
         # Add new labeled data to training set
         X_train = np.concatenate([X_train, new_X])
         y_train = np.concatenate([y_train, new_y])
+        
+        X_train_flat = X_train.reshape(X_train.shape[0], -1)  # Flatten to 2D
+        X_train_resampled_flat, y_train = smote.fit_resample(X_train_flat, y_train)
+        X_train = X_train_resampled_flat.reshape(-1, 48, 48, 1)
 
         # Remove labeled data from unlabeled set
         X_unlabeled = np.delete(X_unlabeled, confident_idx, axis=0)

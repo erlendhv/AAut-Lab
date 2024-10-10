@@ -48,3 +48,5 @@ Final Thoughts:
 This architecture uses padding='same' to maintain spatial dimensions through convolution layers.
 Dropout is added after each block to mitigate overfitting.
 Filters start small to capture fine-grained details and gradually increase in size to detect higher-level features.
+
+Use a known architecture that works well in general: conv-conv-pooling-conv-conv-pooling

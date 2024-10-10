@@ -163,18 +163,18 @@ def train_and_evaluate(model, X_train, y_train, X_val, y_val, model_name):
 
 # Create and train models
 cnn_model = create_cnn_model()
-svm_model = SVC(kernel='rbf', class_weight='balanced')
-rf_model = RandomForestClassifier(
-    n_estimators=100, class_weight='balanced', random_state=42)
-xgb_model = XGBClassifier(use_label_encoder=False,
-                          eval_metric='logloss', scale_pos_weight=1)
+# svm_model = SVC(kernel='rbf', class_weight='balanced')
+# rf_model = RandomForestClassifier(
+    # n_estimators=100, class_weight='balanced', random_state=42)
+# xgb_model = XGBClassifier(use_label_encoder=False,
+                        #   eval_metric='logloss', scale_pos_weight=1)
 alt_cnn_model = create_alternative_cnn_model()
 
 models = [
     (cnn_model, X_train_resampled_cnn, 'CNN'),
-    (svm_model, X_train_resampled, 'SVM'),
-    (rf_model, X_train_resampled, 'Random Forest'),
-    (xgb_model, X_train_resampled, 'XGBoost'),
+    # (svm_model, X_train_resampled, 'SVM'),
+    # (rf_model, X_train_resampled, 'Random Forest'),
+    # (xgb_model, X_train_resampled, 'XGBoost'),
     (alt_cnn_model, X_train_resampled_cnn, 'Alternative CNN')
 ]
 
