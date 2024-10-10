@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from imblearn.over_sampling import SMOTE
 from sklearn.metrics import f1_score, classification_report, confusion_matrix
@@ -30,34 +30,6 @@ X_train_scaled = scaler.fit_transform(X_train)
 X_val_scaled = scaler.transform(X_val)
 Xtest1_scaled = scaler.transform(Xtest1)
 
-# Function to plot sample images
-
-
-def plot_sample_images(X, y, num_samples=5):
-    fig, axes = plt.subplots(1, num_samples, figsize=(15, 3))
-    for i in range(num_samples):
-        idx = np.random.randint(0, X.shape[0])
-        axes[i].imshow(X[idx].reshape(48, 48), cmap='gray')
-        axes[i].set_title(f"Label: {y[idx]}")
-        axes[i].axis('off')
-    plt.tight_layout()
-    plt.show()
-
-
-# Plot class distribution
-plt.figure(figsize=(8, 6))
-sns.countplot(x=Ytrain1)
-plt.title("Class Distribution in Training Data")
-plt.xlabel("Class")
-plt.ylabel("Count")
-plt.show()
-
-# Plot sample images
-plot_sample_images(Xtrain1, Ytrain1)
-
-# Print class distribution
-print("Class distribution:")
-print(np.bincount(Ytrain1))
 
 # Apply SMOTE to handle imbalance
 smote = SMOTE(random_state=42)
@@ -172,5 +144,5 @@ print("\nPredictions on test set:")
 print(y_test_pred)
 
 # Save predictions to file
-np.save('test_predictions.npy', y_test_pred)
+np.save('Part3/test_predictions.npy', y_test_pred)
 print("Predictions saved to 'test_predictions.npy'")
