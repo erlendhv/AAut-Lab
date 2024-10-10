@@ -1,3 +1,4 @@
+import keras
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -6,7 +7,7 @@ from sklearn.metrics import f1_score, classification_report, confusion_matrix
 import seaborn as sns
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, Input
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping
 
@@ -42,46 +43,35 @@ Xtrain1_extra_reshaped = Xtrain1_extra_scaled.reshape(-1, 48, 48, 1)
 
 
 def create_cnn_model():
-    # model = Sequential([
-    #     Conv2D(32, (3, 3), activation='relu', input_shape=(48, 48, 1)),
-    #     MaxPooling2D((2, 2)),
-    #     Conv2D(64, (3, 3), activation='relu'),
-    #     MaxPooling2D((2, 2)),
-    #     Conv2D(64, (3, 3), activation='relu'),
-    #     Flatten(),
-    #     Dense(64, activation='relu'),
-    #     Dropout(0.5),
-    #     Dense(1, activation='sigmoid')
-    # ])
-    # model.compile(optimizer=Adam(learning_rate=0.001),
-    #               loss='binary_crossentropy',
-    #               metrics=['accuracy'])
     model = Sequential([
-        Conv2D(32, (3,3), activation='relu', padding='same', input_shape=(48,48,1)),
-        Conv2D(32, (5,5), activation='relu', padding='same'),
-        MaxPooling2D((2,2)),
-        Conv2D(64, (3,3), activation='relu', padding='same'),
-        Conv2D(64, (7,7), activation='relu', padding='same'),
-        MaxPooling2D(2,2),
-        Conv2D(32, (3,3), activation='relu'),
-        MaxPooling2D((4,4)),
+        Input(shape=(48, 48, 1)),
+        Conv2D(32, (3, 3), activation='relu',
+               padding='same'),
+        Conv2D(32, (5, 5), activation='relu', padding='same'),
+        MaxPooling2D((2, 2)),
+        Conv2D(64, (3, 3), activation='relu', padding='same'),
+        Conv2D(64, (7, 7), activation='relu', padding='same'),
+        MaxPooling2D(2, 2),
+        Conv2D(32, (3, 3), activation='relu'),
+        MaxPooling2D((4, 4)),
         Dropout(0.5),
         Dense(64, activation='relu'),
         Flatten(),
         Dense(1, activation='sigmoid')
     ])
-    
+
     # Compile the model
     model.compile(optimizer=Adam(learning_rate=0.001),
                   loss='binary_crossentropy',
                   metrics=['accuracy'])
     return model
 
+
 def plot_learning_curve(history, model_name):
     """Plot learning curve based on training history"""
     # Plot training & validation accuracy values
     plt.figure(figsize=(12, 5))
-    
+
     # Plot accuracy
     plt.subplot(1, 2, 1)
     plt.plot(history.history['accuracy'])
@@ -103,15 +93,44 @@ def plot_learning_curve(history, model_name):
     plt.show()
 
 # Semi-supervised learning function
-def semi_supervised_learning(model, X_train, y_train, X_unlabeled, X_val, y_val, confidence_threshold=0.95, max_iterations=5):
+
+
+def improved_semi_supervised_learning(model, X_train, y_train, X_unlabeled, X_val, y_val, initial_threshold=0.95, max_iterations=10):
+    confidence_threshold = initial_threshold
+    best_f1 = 0
+    best_model = None
+    no_improvement_count = 0
+
     for iteration in range(max_iterations):
         print(f"\nIteration {iteration + 1}")
 
-        early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+        early_stopping = EarlyStopping(
+            monitor='val_loss', patience=5, restore_best_weights=True)
 
         # Train the model
-        history = model.fit(X_train, y_train, epochs=10, batch_size=32, verbose=0, validation_data=(X_val.reshape(-1,48,48,1), y_val), callbacks=[early_stopping])
+        history = model.fit(X_train, y_train, epochs=10, batch_size=32, verbose=0,
+                            validation_data=(X_val, y_val), callbacks=[early_stopping])
         plot_learning_curve(history, "CNN with semi-supervised learning")
+
+        # Evaluate the model
+        y_val_pred = (model.predict(X_val) > 0.5).astype(int).flatten()
+        f1 = f1_score(y_val, y_val_pred)
+        print(f"F1 Score: {f1:.4f}")
+
+        # Check for improvement and save best model
+        if f1 > best_f1:
+            best_f1 = f1
+            best_model = keras.models.clone_model(model)
+            best_model.set_weights(model.get_weights())
+            no_improvement_count = 0
+        else:
+            no_improvement_count += 1
+            confidence_threshold += 0.01  # Increase threshold if no improvement
+
+        # Early stopping if no improvement for 3 iterations
+        if no_improvement_count >= 3:
+            print("No improvement for 3 iterations. Stopping early.")
+            break
 
         # Predict on unlabeled data
         predictions = model.predict(X_unlabeled)
@@ -125,18 +144,17 @@ def semi_supervised_learning(model, X_train, y_train, X_unlabeled, X_val, y_val,
         # Add new labeled data to training set
         X_train = np.concatenate([X_train, new_X])
         y_train = np.concatenate([y_train, new_y])
-        
-        X_train_flat = X_train.reshape(X_train.shape[0], -1)  # Flatten to 2D
-        X_train_resampled_flat, y_train = smote.fit_resample(X_train_flat, y_train)
+
+        # Apply SMOTE to handle imbalance
+        X_train_flat = X_train.reshape(X_train.shape[0], -1)
+        smote = SMOTE(random_state=42)
+        X_train_resampled_flat, y_train = smote.fit_resample(
+            X_train_flat, y_train)
         X_train = X_train_resampled_flat.reshape(-1, 48, 48, 1)
 
         # Remove labeled data from unlabeled set
         X_unlabeled = np.delete(X_unlabeled, confident_idx, axis=0)
 
-        # Evaluate the model
-        y_val_pred = (model.predict(X_val) > 0.5).astype(int).flatten()
-        f1 = f1_score(y_val, y_val_pred)
-        print(f"F1 Score: {f1:.4f}")
         print(f"Newly labeled samples: {len(new_X)}")
         print(f"Remaining unlabeled samples: {len(X_unlabeled)}")
 
@@ -144,18 +162,18 @@ def semi_supervised_learning(model, X_train, y_train, X_unlabeled, X_val, y_val,
         if len(X_unlabeled) == 0:
             break
 
-    return model, X_train, y_train
+    return best_model, X_train, y_train
 
 
-# Create and train the model with semi-supervised learning
+# Use the improved function
 cnn_model = create_cnn_model()
-cnn_model, X_train_final, y_train_final = semi_supervised_learning(
+best_model, X_train_final, y_train_final = improved_semi_supervised_learning(
     cnn_model, X_train_resampled_cnn, y_train_resampled,
     Xtrain1_extra_reshaped, X_val_cnn, y_val
 )
 
-# Final evaluation
-y_val_pred = (cnn_model.predict(X_val_cnn) > 0.5).astype(int).flatten()
+# Final evaluation using the best model
+y_val_pred = (best_model.predict(X_val_cnn) > 0.5).astype(int).flatten()
 final_f1 = f1_score(y_val, y_val_pred)
 print("\nFinal Model Evaluation:")
 print(classification_report(y_val, y_val_pred))
