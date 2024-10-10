@@ -95,7 +95,7 @@ def plot_learning_curve(history, model_name):
 # Semi-supervised learning function
 
 
-def improved_semi_supervised_learning(model, X_train, y_train, X_unlabeled, X_val, y_val, initial_threshold=0.95, max_iterations=10):
+def improved_semi_supervised_learning(model, X_train, y_train, X_unlabeled, X_val, y_val, initial_threshold=0.95, max_iterations=10, min_new_samples=10):
     confidence_threshold = initial_threshold
     best_f1 = 0
     best_model = None
@@ -105,7 +105,7 @@ def improved_semi_supervised_learning(model, X_train, y_train, X_unlabeled, X_va
         print(f"\nIteration {iteration + 1}")
 
         early_stopping = EarlyStopping(
-            monitor='val_loss', patience=5, restore_best_weights=True)
+            monitor='accuracy', patience=5, restore_best_weights=True)
 
         # Train the model
         history = model.fit(X_train, y_train, epochs=10, batch_size=32, verbose=0,
@@ -135,9 +135,29 @@ def improved_semi_supervised_learning(model, X_train, y_train, X_unlabeled, X_va
         # Predict on unlabeled data
         predictions = model.predict(X_unlabeled)
 
-        # Select confident predictions
-        confident_idx = np.where((predictions > confidence_threshold) | (
-            predictions < (1 - confidence_threshold)))[0]
+        # # Select confident predictions
+        # confident_idx = np.where((predictions > confidence_threshold) | (
+        #     predictions < (1 - confidence_threshold)))[0]
+
+        # Loop to adjust the confidence threshold if needed to meet the minimum number of new samples
+        while True:
+            # Select confident predictions
+            confident_idx = np.where((predictions > confidence_threshold) | 
+                                     (predictions < (1 - confidence_threshold)))[0]
+
+            if len(confident_idx) >= min_new_samples or confidence_threshold <= min_threshold:
+                # Break if enough samples are found, or the threshold reaches the minimum limit
+                break
+            else:
+                # Lower the confidence threshold slightly to include more samples
+                confidence_threshold = max(confidence_threshold - 0.01, min_threshold)
+                print(f"Lowering confidence threshold to {confidence_threshold:.2f}")
+
+        # If still no samples are found after adjusting the threshold, stop
+        if len(confident_idx) == 0:
+            print("No confident samples found. Stopping.")
+            break
+
         new_X = X_unlabeled[confident_idx]
         new_y = (predictions[confident_idx] > 0.5).astype(int).flatten()
 
@@ -146,11 +166,11 @@ def improved_semi_supervised_learning(model, X_train, y_train, X_unlabeled, X_va
         y_train = np.concatenate([y_train, new_y])
 
         # Apply SMOTE to handle imbalance
-        X_train_flat = X_train.reshape(X_train.shape[0], -1)
-        smote = SMOTE(random_state=42)
-        X_train_resampled_flat, y_train = smote.fit_resample(
-            X_train_flat, y_train)
-        X_train = X_train_resampled_flat.reshape(-1, 48, 48, 1)
+        # X_train_flat = X_train.reshape(X_train.shape[0], -1)
+        # smote = SMOTE(random_state=42)
+        # X_train_resampled_flat, y_train = smote.fit_resample(
+        #     X_train_flat, y_train)
+        # X_train = X_train_resampled_flat.reshape(-1, 48, 48, 1)
 
         # Remove labeled data from unlabeled set
         X_unlabeled = np.delete(X_unlabeled, confident_idx, axis=0)
