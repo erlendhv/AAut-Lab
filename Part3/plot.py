@@ -50,3 +50,15 @@ plot_sample_images(Xtrain1, Ytrain1)
 # Print class distribution
 print("Class distribution:")
 print(np.bincount(Ytrain1))
+
+test_predictions = np.load('Part3/test_predictions.npy')
+print(test_predictions)
+print(test_predictions.shape)
+
+# Plot class distribution of test predictions
+plt.figure(figsize=(8, 6))
+sns.countplot(x=test_predictions)
+plt.title("Class Distribution in Test Predictions")
+plt.xlabel("Class")
+plt.ylabel("Count")
+plt.show()
