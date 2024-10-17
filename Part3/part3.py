@@ -4,8 +4,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from imblearn.over_sampling import SMOTE
 from sklearn.metrics import f1_score, classification_report, confusion_matrix
+from sklearn.model_selection import GridSearchCV
 import seaborn as sns
 
+from scikeras.wrappers import KerasClassifier
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
@@ -132,15 +134,29 @@ def plot_learning_curve(history, model_name):
     plt.show()
 
 # Train and evaluate models
-def train_and_evaluate(model, X_train, y_train, X_val, y_val, model_name):
+def train_and_evaluate(model_fn, X_train, y_train, X_val, y_val, model_name):
     if model_name == 'CNN' or model_name == 'Alternative CNN':
-        history = model.fit(X_train.reshape(-1, 48, 48, 1), y_train,
-                            validation_data=(
-                                X_val.reshape(-1, 48, 48, 1), y_val),
-                            epochs=10, batch_size=32, verbose=0)
+        # Wrapping the model function in KerasClassifier
+        model = KerasClassifier(build_fn=model_fn, verbose=0)
+
+        # Define the hyperparameters grid
+        param_grid = {
+            'batch_size': [16, 32, 64],
+            'epochs': [10, 20, 50]
+        }
+
+        grid = GridSearchCV(estimator=model, param_grid=param_grid, n_jobs=-1, cv=5)
+        grid_res = grid.fit(X_train, y_train)
+        
+        print(f'Best results from grid search for {model_name}: result={grid_res.best_score_}, best parameters: {grid_res.best_params_}')
+        
+        # Train the best model from GridSearchCV
+        history = grid_res.best_estimator_.fit(X_train, y_train,
+                                               validation_data=(X_val, y_val),
+                                               verbose=1)
+
         plot_learning_curve(history, model_name)
-        y_pred = (model.predict(X_val.reshape(-1, 48, 48, 1))
-                  > 0.5).astype(int).flatten()
+        y_pred = (grid_res.best_estimator_.predict(X_val) > 0.5).astype(int).flatten()
     else:
         model.fit(X_train, y_train)
         y_pred = model.predict(X_val)
@@ -159,7 +175,6 @@ def train_and_evaluate(model, X_train, y_train, X_val, y_val, model_name):
     plt.show()
 
     return f1
-
 
 # Create and train models
 cnn_model = create_cnn_model()

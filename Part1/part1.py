@@ -221,7 +221,7 @@ def huber_regression_with_validation(X_train_clean, y_train_clean, X_val, y_val)
         f"Huber MSE on Validation Set: {mean_squared_error(y_val, y_val_pred)}")
     print(f"Huber R2 on Validation Set: {r2_score(y_val, y_val_pred)}")
 
-    plot_residuals(y_val, y_val_pred)
+    plot_residuals(y_val, y_val_pred, title="huber residual plot")
 
     return huber_cv.best_params_
 
@@ -277,7 +277,7 @@ def ridge_L2_regularization_with_validation(X_train_clean, y_train_clean, X_val,
         f"Ridge MSE on Validation Set: {mean_squared_error(y_val, y_val_pred)}")
     print(f"Ridge R2 on Validation Set: {r2_score(y_val, y_val_pred)}")
 
-    plot_residuals(y_val, y_val_pred)
+    plot_residuals(y_val, y_val_pred, title="ridge residual plot")
 
     return ridge_cv.best_params_
 
@@ -306,7 +306,7 @@ def lasso_L1_regularization_with_validation(X_train_clean, y_train_clean, X_val,
         f"Lasso MSE on Validation Set: {mean_squared_error(y_val, y_val_pred)}")
     print(f"Lasso R2 on Validation Set: {r2_score(y_val, y_val_pred)}")
 
-    plot_residuals(y_val, y_val_pred)
+    plot_residuals(y_val, y_val_pred, title="lasso residual plot")
 
     return lasso_cv.best_params_
 
@@ -465,7 +465,7 @@ def theil_sen_regression_with_validation(X_train_clean, y_train_clean, X_val, y_
 
 
 if __name__ == "__main__":
-    # data_info(X_train, y_train)
+    data_info(X_train, y_train)
 
     print("Outlier Detection with Z-score:")
     X_train_clean_z, y_train_clean_z = z_outlier_detection(X_train, y_train)
