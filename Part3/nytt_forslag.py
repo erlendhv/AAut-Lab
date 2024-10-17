@@ -100,12 +100,13 @@ def improved_semi_supervised_learning(model, X_train, y_train, X_unlabeled, X_va
     best_f1 = 0
     best_model = None
     no_improvement_count = 0
+    min_threshold = 0.8
 
     for iteration in range(max_iterations):
         print(f"\nIteration {iteration + 1}")
 
         early_stopping = EarlyStopping(
-            monitor='accuracy', patience=5, restore_best_weights=True)
+            monitor='val_loss', patience=5, restore_best_weights=True)
 
         # Train the model
         history = model.fit(X_train, y_train, epochs=10, batch_size=32, verbose=0,
@@ -142,7 +143,7 @@ def improved_semi_supervised_learning(model, X_train, y_train, X_unlabeled, X_va
         # Loop to adjust the confidence threshold if needed to meet the minimum number of new samples
         while True:
             # Select confident predictions
-            confident_idx = np.where((predictions > confidence_threshold) | 
+            confident_idx = np.where((predictions > confidence_threshold) |
                                      (predictions < (1 - confidence_threshold)))[0]
 
             if len(confident_idx) >= min_new_samples or confidence_threshold <= min_threshold:
@@ -150,8 +151,10 @@ def improved_semi_supervised_learning(model, X_train, y_train, X_unlabeled, X_va
                 break
             else:
                 # Lower the confidence threshold slightly to include more samples
-                confidence_threshold = max(confidence_threshold - 0.01, min_threshold)
-                print(f"Lowering confidence threshold to {confidence_threshold:.2f}")
+                confidence_threshold = max(
+                    confidence_threshold - 0.01, min_threshold)
+                print(
+                    f"Lowering confidence threshold to {confidence_threshold:.2f}")
 
         # If still no samples are found after adjusting the threshold, stop
         if len(confident_idx) == 0:
